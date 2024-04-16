@@ -2,6 +2,8 @@ import numpy as np
 
 from ..utils import get_n_classes, label_to_onehot, onehot_to_label, accuracy_fn
 
+import matplotlib.pyplot as plt
+
 
 class LogisticRegression(object):
     """
@@ -10,7 +12,7 @@ class LogisticRegression(object):
     Implemented regularizer. Did not find any improvements from main, with different values of lambda) 
     """
 
-    def __init__(self, lr, max_iters=500, lambda_reg=0.0075):
+    def __init__(self, lr, max_iters=400, lambda_reg=0.01):
         """
         Initialize the new object (see dummy_methods.py)
         and set its arguments.
@@ -49,7 +51,9 @@ class LogisticRegression(object):
         Returns:
             pred_labels (array): labels of shape (N,)
         """
-        pred_labels = self.logistic_regression_predict(test_data, self.weights)
+
+        pred_labels = self.logistic_regression_predict(
+            test_data, self.weights)
 
         return pred_labels
 
@@ -69,23 +73,19 @@ class LogisticRegression(object):
         """
         Args:
             data (array): Input of shape (N,D)
-            labels (array): Labels of shape (N,)
+            labels (array): Labels of shape (N,) -- will be converted to one-hot encoding
             w (array): Weights of shape (D,C)
             lambda_reg (float): Regularization strength
         Returns:
             float: Loss value 
-    """
-        # Calculate the current prediction
+        """
+        labels_onehot = label_to_onehot(
+            labels)  # Convert labels to one-hot encoding
         softmax_pred = self.f_softmax(data, w)
-
-        # Cross-entropy loss
-        cross_entropy_loss = - np.sum(labels * np.log(softmax_pred))
-
-    # L1 regularization term
+        cross_entropy_loss = - np.sum(labels_onehot * np.log(softmax_pred))
         l1_penalty = self.lambda_reg * np.sum(np.abs(w))
-
-        # Total loss is the sum of cross-entropy loss and L1 penalty
         total_loss = cross_entropy_loss + l1_penalty
+
         return total_loss
 
     def gradient_loss_function(self, data, labels, W):
@@ -98,15 +98,11 @@ class LogisticRegression(object):
         Returns:
             numpy.ndarray: Gradient of loss with respect to W
         """
-        # Compute the gradient of the cross-entropy part
         cross_entropy_grad = data.T @ (self.f_softmax(data,
                                        W) - label_to_onehot(labels))
 
-        # Compute the gradient of the L1 penalty term
-        # The gradient is lambda_reg times the sign of the weights
         l1_grad = self.lambda_reg * np.sign(W)
 
-        # The total gradient is the sum of cross-entropy gradient and L1 gradient
         total_grad = cross_entropy_grad + l1_grad
         return total_grad
 
@@ -132,10 +128,6 @@ class LogisticRegression(object):
         weights = np.random.normal(0, 0.1, (D, C))
 
         for it in range(self.max_iters):
-            predictions = self.logistic_regression_predict(data, weights)
-            if accuracy_fn(predictions, labels) >= 100:
-                break
-            # Include the regularization strength in the gradient calculation
             weights -= self.lr * \
                 self.gradient_loss_function(
                     data, labels, weights)
