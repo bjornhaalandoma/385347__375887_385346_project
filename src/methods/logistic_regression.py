@@ -12,7 +12,7 @@ class LogisticRegression(object):
     Implemented regularizer. Did not find any improvements from main, with different values of lambda) 
     """
 
-    def __init__(self, lr, max_iters=400, lambda_reg=0.01):
+    def __init__(self, lr, max_iters=400, lambda_reg=0.01, task_kind="classification"):
         """
         Initialize the new object (see dummy_methods.py)
         and set its arguments.
@@ -24,6 +24,7 @@ class LogisticRegression(object):
         self.lr = lr
         self.max_iters = max_iters
         self.lambda_reg = lambda_reg
+        self.task_kind = task_kind
 
     def fit(self, training_data, training_labels):
         """

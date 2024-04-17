@@ -1,6 +1,6 @@
 import numpy as np
 import sys
-from ..utils import accuracy_fn
+from ..utils import accuracy_fn, get_n_classes
 
 
 class LinearRegression(object):
@@ -10,13 +10,14 @@ class LinearRegression(object):
         Recall that linear regression is just ridge regression with lambda=0.
     """
 
-    def __init__(self, lmda):
+    def __init__(self, lmda, task_kind="regression"):
         """
             Initialize the task_kind (see dummy_methods.py)
             and call set_arguments function of this class.
         """
         self.lmda = lmda
         self.weights = None  # Initialize weights as None
+        self.task_kind = task_kind
 
     def fit(self, training_data, training_labels):
         D = training_data.shape[1]
@@ -24,7 +25,6 @@ class LinearRegression(object):
             # Properly initialize weights here
             self.weights = np.random.normal(0, 1e-1, D)
 
-        # Existing code remains the same
         self.weights = self.find_weights(
             training_data, training_labels, epochs=1000, lr=0.01)
         pred_regression_targets = self.predict(training_data)
@@ -95,17 +95,16 @@ class LinearRegression(object):
                 w (np.array): weight parameters of shape (D,M)
         """
         # Initialize the weights with the correct shape
-        D = X_train.shape[1]  # Number of features
-        M = y_train.shape[1]  # Number of regression targets
+        # Number of features  # Number of regression targets
+        print(y_train.shape)
+        D = X_train.shape[1]
+        M = y_train.shape[1]
+
         w = np.random.normal(0, 1e-1, (D, M))
 
         # Iterate a given number of epochs over the training data
         for i in range(epochs):
-            # Ensure the predict function handles the multi-output structure
-            # Pass the current weights w
-            # Calculate the gradient using the correct dimensions
             grad = self.find_gradient(X_train, y_train, w)
-            # Update the weights
             w -= lr * grad
 
         return w

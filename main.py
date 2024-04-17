@@ -72,17 +72,12 @@ def main(args):
 
     # 4. Train and evaluate the method
 
+    # TODO Checking if ctrain is correct
+
     if args.task == "center_locating":
         # Fit parameters on training data
-        mean = np.mean(xtrain, axis=0)
-        std = np.std(xtrain, axis=0)
-        xtrain = normalize_fn(xtrain, mean, std)
 
         preds_train = method_obj.fit(append_bias_term(xtrain), ctrain)
-
-        mean = np.mean(xtest, axis=0)
-        std = np.std(xtest, axis=0)
-        xtest = normalize_fn(xtest, mean, std)
 
         # Perform inference for training and test data
         train_pred = method_obj.predict(append_bias_term(xtrain))
