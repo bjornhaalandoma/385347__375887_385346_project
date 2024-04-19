@@ -2,13 +2,19 @@ import numpy as np
 
 from ..utils import get_n_classes, label_to_onehot, onehot_to_label, accuracy_fn
 
+import matplotlib.pyplot as plt
+
+import time
+
 
 class LogisticRegression(object):
     """
     Logistic regression classifier.
+
+    Implemented regularizer. Did not find any improvements from main, with different values of lambda) 
     """
 
-    def __init__(self, lr, max_iters=500):
+    def __init__(self, lr, max_iters, lambda_reg=0.001, task_kind="classification"):
         """
         Initialize the new object (see dummy_methods.py)
         and set its arguments.
@@ -19,8 +25,11 @@ class LogisticRegression(object):
         """
         self.lr = lr
         self.max_iters = max_iters
+        self.lambda_reg = lambda_reg
+        self.task_kind = task_kind
 
     def fit(self, training_data, training_labels):
+        s1 = time.time()
         """
         Trains the model, returns predicted labels for training data.
 
@@ -34,10 +43,15 @@ class LogisticRegression(object):
         self.gradient_descent(training_data, training_labels)
         pred_labels = self.logistic_regression_predict(
             training_data, self.weights)
+        s2 = time.time()
+
+        print(f"Time taken for training: {s2-s1}")
 
         return pred_labels
 
     def predict(self, test_data):
+
+        s3 = time.perf_counter()
         """
         Runs prediction on the test data.
 
@@ -46,7 +60,11 @@ class LogisticRegression(object):
         Returns:
             pred_labels (array): labels of shape (N,)
         """
-        pred_labels = self.logistic_regression_predict(test_data, self.weights)
+
+        pred_labels = self.logistic_regression_predict(
+            test_data, self.weights)
+        s4 = time.perf_counter()
+        print(f"Time taken for prediction: {s4-s3}")
 
         return pred_labels
 
@@ -61,26 +79,43 @@ class LogisticRegression(object):
         return np.exp(data @ W) / np.sum(np.exp(data @ W), axis=1)[:, np.newaxis]
 
     # TODO Remove? Not using currently, but can be used for visualization
+
     def loss_function(self, data, labels, w):
         """
         Args:
             data (array): Input of shape (N,D)
-            labels (array): Labels of shape (N,)
+            labels (array): Labels of shape (N,) -- will be converted to one-hot encoding
             w (array): Weights of shape (D,C)
+            lambda_reg (float): Regularization strength
         Returns:
             float: Loss value 
         """
-        return - np.sum(labels * np.log(self.f_softmax(data, w)))
+        labels_onehot = label_to_onehot(
+            labels)  # Convert labels to one-hot encoding
+        softmax_pred = self.f_softmax(data, w)
+        cross_entropy_loss = - np.sum(labels_onehot * np.log(softmax_pred))
+        l1_penalty = self.lambda_reg * np.sum(np.abs(w))
+        total_loss = cross_entropy_loss + l1_penalty
+
+        return total_loss
 
     def gradient_loss_function(self, data, labels, W):
         """
         Args:
             data (array): Input of shape (N,D)
-            labels (_type_): Labels of shape (N,)
-            W (_type_): _description_
+            labels (array): Labels of shape (N,)
+            W (array): Weights of shape (D,C)
+            lambda_reg (float): Regularization strength
+        Returns:
+            numpy.ndarray: Gradient of loss with respect to W
         """
+        cross_entropy_grad = data.T @ (self.f_softmax(data,
+                                       W) - label_to_onehot(labels))
 
-        return data.T @ (self.f_softmax(data, W) - label_to_onehot(labels))
+        l1_grad = self.lambda_reg * np.sign(W)
+
+        total_grad = cross_entropy_grad + l1_grad
+        return total_grad
 
     def logistic_regression_predict(self, data, W):
         """
@@ -93,21 +128,19 @@ class LogisticRegression(object):
         return np.argmax(self.f_softmax(data, W), axis=1)
 
     def gradient_descent(self, data, labels):
-        """_summary_
-
+        """
         Args:
-            data (_type_): _description_
-            labels (_type_): _description_
+            data (array): Input of shape (N,D)
+            labels (array): Labels of shape (N,)
+            lambda_reg (float): Regularization strength
         """
         D = data.shape[1]
         C = get_n_classes(labels)
         weights = np.random.normal(0, 0.1, (D, C))
 
         for it in range(self.max_iters):
-            predictions = self.logistic_regression_predict(data, weights)
-            if accuracy_fn(predictions, labels) >= 80:
-                break
             weights -= self.lr * \
-                self.gradient_loss_function(data, labels, weights)
+                self.gradient_loss_function(
+                    data, labels, weights)
 
         self.weights = weights

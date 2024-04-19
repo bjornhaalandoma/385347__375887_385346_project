@@ -1,3 +1,5 @@
+from sklearn.model_selection import train_test_split
+from src import utils
 import argparse
 
 import numpy as np
@@ -8,6 +10,8 @@ from src.methods.logistic_regression import LogisticRegression
 from src.methods.linear_regression import LinearRegression
 from src.methods.knn import KNN
 from src.utils import normalize_fn, append_bias_term, accuracy_fn, macrof1_fn, mse_fn
+import matplotlib.pyplot as plt
+
 import os
 np.random.seed(100)
 
@@ -18,7 +22,7 @@ def main(args):
     and add your own code, visualization, prints, etc!
 
     Arguments:
-        args (Namespace): arguments that were parsed from the command line (see at the end 
+        args (Namespace): arguments that were parsed from the command line (see at the end
                           of this file). Their value can be accessed as "args.argument".
     """
     # 1. First, we load our data and flatten the images into vectors
@@ -42,10 +46,24 @@ def main(args):
 
     # Make a validation set (it can overwrite xtest, ytest)
     if not args.test:
-        # WRITE YOUR CODE HERE
-        pass
+        xtrain_mean = np.mean(xtrain, axis=0)
+        xtrain_std = np.std(xtrain, axis=0)
 
-    # WRITE YOUR CODE HERE to do any other data processing
+        normalized_xtrain = normalize_fn(xtrain, xtrain_mean, xtrain_std)
+        normalized_xtest = normalize_fn(xtest, xtrain_mean, xtrain_std)
+
+        x_train_with_bias = append_bias_term(normalized_xtrain)
+        x_test_with_bias = append_bias_term(normalized_xtest)
+
+        x_train_sub, xval, ytrain_sub, yval = train_test_split(
+            xtrain, ytrain, test_size=0.3, random_state=42)
+
+        normalized_x_train_sub = normalize_fn(
+            x_train_sub, xtrain_mean, xtrain_std)
+        normalized_xval = normalize_fn(xval, xtrain_mean, xtrain_std)
+
+        x_train_sub_with_bias = append_bias_term(normalized_x_train_sub)
+        xval_with_bias = append_bias_term(normalized_xval)
 
     # 3. Initialize the method you want to use.
 
@@ -57,18 +75,27 @@ def main(args):
     if args.method == "dummy_classifier":
         method_obj = DummyClassifier(arg1=1, arg2=2)
 
-    elif args.method == "logistic_regression":  # WRITE YOUR CODE HERE
-        method_obj = LogisticRegression(lr=0.001)
+    elif args.method == "logistic_regression":
+        method_obj = LogisticRegression(lr=args.lr, max_iters=args.max_iters)
+
+    elif args.method == "linear_regression":
+        method_obj = LinearRegression(lmda=args.lmda)
+
+    elif args.method == "knn":
+        method_obj = KNN(k=args.K)
 
     # 4. Train and evaluate the method
 
+    # TODO Checking if ctrain is correct
+
     if args.task == "center_locating":
         # Fit parameters on training data
-        preds_train = method_obj.fit(xtrain, ctrain)
+
+        preds_train = method_obj.fit(append_bias_term(xtrain), ctrain)
 
         # Perform inference for training and test data
-        train_pred = method_obj.predict(xtrain)
-        preds = method_obj.predict(xtest)
+        train_pred = method_obj.predict(append_bias_term(xtrain))
+        preds = method_obj.predict(append_bias_term(xtest))
 
         # Report results: performance on train and valid/test sets
         train_loss = mse_fn(train_pred, ctrain)
@@ -78,20 +105,83 @@ def main(args):
 
     elif args.task == "breed_identifying":
 
-        # Fit (:=train) the method on the training data for classification task
-        preds_train = method_obj.fit(xtrain, ytrain)
+        if args.plot_hyperparameters:
 
-        # Predict on unseen data
-        preds = method_obj.predict(xtest)
+            lambda_reg_values = [100, 10, 1, 0.1, 0.001]
+            learning_rates = [0.0001, 0.001, 0.005, 0.01, 0.1]
+            max_iterations_range = range(5, 500, 20)
 
-        # Report results: performance on train and valid/test sets
-        acc = accuracy_fn(preds_train, ytrain)
-        macrof1 = macrof1_fn(preds_train, ytrain)
-        print(f"\nTrain set: accuracy = {acc:.3f}% - F1-score = {macrof1:.6f}")
+            for lambda_reg in lambda_reg_values:
+                results = {}
 
-        acc = accuracy_fn(preds, ytest)
-        macrof1 = macrof1_fn(preds, ytest)
-        print(f"Test set:  accuracy = {acc:.3f}% - F1-score = {macrof1:.6f}")
+                # Initialize results storage for this lambda_reg value
+                for lr in learning_rates:
+                    results[lr] = {'max_iters': [], 'accuracies': []}
+
+                # Run the training and validation loop
+                for lr in learning_rates:
+                    for max_iters in max_iterations_range:
+                        model = LogisticRegression(
+                            lr=lr, max_iters=max_iters, lambda_reg=lambda_reg)
+                        model.fit(x_train_sub_with_bias, ytrain_sub)
+
+                        val_acc = accuracy_fn(
+                            model.predict(xval_with_bias), yval)
+                        results[lr]['max_iters'].append(max_iters)
+                        results[lr]['accuracies'].append(val_acc)
+
+                # Find the best hyperparameter and its accuracy for this lambda_reg
+                best_lr = max(results, key=lambda lr: max(
+                    results[lr]['accuracies']))
+                best_acc = max(max(results[lr]['accuracies'])
+                               for lr in learning_rates)
+                best_iters = max_iterations_range[results[best_lr]['accuracies'].index(
+                    best_acc)]
+
+                # Plot the results for this lambda_reg
+                fig, ax = plt.subplots()
+                for lr in results:
+                    ax.plot(results[lr]['max_iters'], results[lr]
+                            ['accuracies'], label=f'lr={lr}')
+
+                best_point, = ax.plot(best_iters, best_acc, 'ro')
+                ax.annotate(f'{best_acc:.2f}%', xy=(best_iters, best_acc), xytext=(8, 0),
+                            textcoords='offset points', ha='center', va='center',
+                            color="white", bbox=dict(boxstyle='round,pad=0.2', fc='red', alpha=0.5))
+
+                labels = [f'lr={lr}' for lr in learning_rates]
+                labels.append(
+                    f'Best Accuracy: {best_acc:.2f}% (lr={best_lr}, iters={best_iters}, lambda={lambda_reg})')
+                handles, _ = ax.get_legend_handles_labels()
+                handles.append(best_point)
+
+                ax.set_xlabel('Maximum Iterations')
+                ax.set_ylabel('Accuracy')
+                ax.set_title(f'Hyperparameter Tuning for lambda={lambda_reg}')
+                ax.legend(handles=handles, labels=labels, loc='best')
+
+                plt.tight_layout()
+                plt.show()
+
+        else:
+
+            # Fit (:=train) the method on the training data for classification task. Append bias term.
+            preds_train = method_obj.fit(x_train_with_bias, ytrain)
+
+            # Predict on unseen data. Append bias term.
+            preds = method_obj.predict(x_test_with_bias)
+
+            # Report results: performance on train and valid/test sets
+            acc = accuracy_fn(preds_train, ytrain)
+            macrof1 = macrof1_fn(preds_train, ytrain)
+            print(
+                f"\nTrain set: accuracy = {acc:.3f}% - F1-score = {macrof1:.6f}")
+
+            acc = accuracy_fn(preds, ytest)
+            macrof1 = macrof1_fn(preds, ytest)
+            print(
+                f"Test set:  accuracy = {acc:.3f}% - F1-score = {macrof1:.6f}")
+
     else:
         raise Exception(
             "Invalid choice of task! Only support center_locating and breed_identifying!")
@@ -121,6 +211,8 @@ if __name__ == '__main__':
                         help="max iters for methods which are iterative")
     parser.add_argument('--test', action="store_true",
                         help="train on whole training data and evaluate on the test data, otherwise use a validation set")
+    parser.add_argument('--plot_hyperparameters', action='store_true',
+                        help="If set, plots the hyperparameter tuning results")
 
     # Feel free to add more arguments here if you need!
 
