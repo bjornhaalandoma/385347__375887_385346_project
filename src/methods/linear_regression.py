@@ -1,6 +1,7 @@
 import numpy as np
 import sys
-from ..utils import accuracy_fn, get_n_classes
+from ..utils import accuracy_fn, get_n_classes, append_bias_term
+import time
 
 
 class LinearRegression(object):
@@ -10,24 +11,26 @@ class LinearRegression(object):
         Recall that linear regression is just ridge regression with lambda=0.
     """
 
-    def __init__(self, lmda, task_kind="regression"):
+    def __init__(self, lmda, task_kind="regression", lr=0.01, epochs=400):
         """
             Initialize the task_kind (see dummy_methods.py)
             and call set_arguments function of this class.
         """
         self.lmda = lmda
-        self.weights = None  # Initialize weights as None
         self.task_kind = task_kind
+        self.lr = lr
+        self.epochs = epochs
 
     def fit(self, training_data, training_labels):
-        D = training_data.shape[1]
-        if self.weights is None:
-            # Properly initialize weights here
-            self.weights = np.random.normal(0, 1e-1, D)
 
-        self.weights = self.find_weights(
-            training_data, training_labels, epochs=1000, lr=0.01)
+        s1 = time.time()
+
+        self.weights = self.find_weights(training_data, training_labels)
         pred_regression_targets = self.predict(training_data)
+
+        s2 = time.time()
+
+        print(f"Time taken for training: {s2-s1}")
 
         return pred_regression_targets
 
@@ -37,13 +40,18 @@ class LinearRegression(object):
 
         Arguments:
             test_data (np.array): test data of shape (N,D)
-            w (np.array): weight parameters of shape (D,M)
         Returns:
             pred_regression_targets (np.array): predicted labels of shape (N,M)
+
     """
+        s3 = time.perf_counter()
         # Use the dot product to predict for multi-output regression
         pred_regression_targets = np.dot(test_data, self.weights)
+        s4 = time.perf_counter()
+        print(f"Time taken for prediction: {s4-s3}")
         return pred_regression_targets
+
+    # TODO: Remove? Currently not using
 
     def get_loss(self, w, X_train, y_train, X_test, y_test):
         """
@@ -64,47 +72,20 @@ class LinearRegression(object):
         return loss_test
 
     def find_gradient(self, X, y, w):
-        """
-        Computes the gradient of the empirical risk with respect to the weights w.
-
-        Arguments:
-            X (np.array): Input data of shape (N, D), where N is the number of samples and D is the number of features.
-            y (np.array): Labels of shape (N, M), where M is the number of outputs.
-            w (np.array): Weight parameters of shape (D, M).
-
-        Returns:
-            grad (np.array): Gradient of the empirical risk of shape (D, M).
-        """
         N = X.shape[0]
-        predictions = X @ w  # Matrix multiplication, result has shape (N, M)
-        errors = predictions - y  # Result has shape (N, M)
-        # Matrix multiplication, result has shape (D, M)
-        grad = 2 / N * X.T @ errors
-        return grad
+        pred_error = y - np.dot(X, w)
+        grad_W = (-2/N) * np.dot(X.T, pred_error) + 2 * self.lmda * w
+        return grad_W
 
-    def find_weights(self, X_train, y_train, epochs, lr):
-        """
-            Computes the weight parameters w using gradient descent.
+    def find_weights(self, X_train, y_train):
 
-            Arguments:
-                X_train (np.array): training data of shape (N,D)
-                y_train (np.array): training labels of shape (N,M)
-                epochs (int): number of epochs
-                lr (float): learning rate
-            Returns:
-                w (np.array): weight parameters of shape (D,M)
-        """
-        # Initialize the weights with the correct shape
-        # Number of features  # Number of regression targets
-        print(y_train.shape)
         D = X_train.shape[1]
         M = y_train.shape[1]
+        w = np.random.normal(0, 1e-5, (D, M))
 
-        w = np.random.normal(0, 1e-1, (D, M))
-
-        # Iterate a given number of epochs over the training data
-        for i in range(epochs):
-            grad = self.find_gradient(X_train, y_train, w)
-            w -= lr * grad
+        for i in range(self.epochs):
+            gradient = self.find_gradient(X_train, y_train, w)
+            # Implement gradient clipping
+            w -= self.lr * gradient
 
         return w

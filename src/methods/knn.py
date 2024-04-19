@@ -12,8 +12,8 @@ class KNN(object):
         """
         self.k = k
         self.task_kind = task_kind
-        self.trainingData = 0
-        self.trainingLabels = 0
+        self.trainingData = None
+        self.trainingLabels = None
 
     def fit(self, training_data, training_labels):
 
@@ -40,51 +40,96 @@ class KNN(object):
         ###
         ##
 
-        # preparing return variable
-        pred_labels = [0] * training_data.shape[0]
+        if self.task_kind == "classification":
+            # preparing return variable
+            pred_labels = np.zeros(training_data.shape[0], dtype=int)
 
-        # calculating distances and deciding labels
-        for row1 in training_data:
-            distances = list()
-            for row2 in training_data:
-                if row1 == row2:
-                    continue
-                dist = self.euclidean_distance(
-                    training_data[row1], training_data[row2])
-                distances.append((row2, dist))
-            distances.sort(key=lambda tup: tup[1])
+            # calculating distances and deciding labels
+            for row1 in range(training_data.shape[0]):
+                distances = list()
+                for row2 in range(training_data.shape[0]):
+                    if row1 == row2:
+                        distances.append(0)
+                        continue
+                    dist = self.euclidean_distance(
+                        training_data[row1], training_data[row2])
+                    distances.append(dist)
 
-            Times = [0] * 20
-            AverageDist = [0] * 20
-            for i in range(self.k):
-                Times[training_labels[distances[i][0]]] += 1
-                AverageDist[training_labels[distances[i][0]]
-                            ] += distances[i][1]
+                sorted_indexes = sorted(
+                    range(len(distances)), key=lambda i: distances[i])
+                distances.sort()
 
-            for i in range(self.k):
-                if Times[i] == 0:
-                    continue
-                AverageDist[i] = AverageDist[i] / Times[i]
+                Times = [0] * 20
+                AverageDist = [0] * 20
+                for i in range(self.k + 1):
+                    if i == 0:
+                        continue
+                    label_index = sorted_indexes[i]
+                    label = training_labels[label_index]
+                    print(f"label_index: {label_index}, label: {label}")
+                    Times[label] += 1
+                    AverageDist[label] += distances[i]
 
-            maxValue = np.max(Times)
-            count_max_value = 0
-            for i in range(20):
-                if Times[i] == maxValue:
-                    count_max_value += 1
+                # treat the case when k is larger than labels???
 
-            if count_max_value == 1:
-                pred_labels[row1] = np.argmax(Times)
+                for i in range(self.k):
+                    if Times[i] == 0:
+                        continue
+                    AverageDist[i] = AverageDist[i] / Times[i]
 
-            else:
-                sol = np.max(AverageDist)
+                maxValue = np.max(Times)
+                count_max_value = 0
                 for i in range(20):
-                    if Times[i] == np.max(Times):
-                        if AverageDist[i] < sol:
-                            sol = AverageDist[i]
-                            index = i
-                pred_labels[row1] = index
+                    if Times[i] == maxValue:
+                        count_max_value += 1
 
-        return pred_labels
+                if count_max_value == 1:
+                    pred_labels[row1] = np.argmax(Times)
+
+                else:
+                    sol = np.max(AverageDist)
+                    for i in range(20):
+                        if Times[i] == np.max(Times):
+                            if AverageDist[i] < sol:
+                                sol = AverageDist[i]
+                                index = i
+                    pred_labels[row1] = index
+
+            return pred_labels
+        else:
+            # preparing return variable
+            pred_labels = np.zeros(training_data.shape[0], dtype=int)
+
+            # calculating distances and deciding labels
+            for row1 in range(training_data.shape[0]):
+                distances = list()
+                for row2 in range(training_data.shape[0]):
+                    if row1 == row2:
+                        distances.append(0)
+                        continue
+                    dist = self.euclidean_distance(
+                        training_data[row1], training_data[row2])
+                    distances.append(dist)
+
+                sorted_indexes = sorted(
+                    range(len(distances)), key=lambda i: distances[i])
+                distances.sort()
+
+                AverageDist = [0] * 20
+                x = 0
+                y = 0
+                for i in range(self.k + 1):
+                    if i == 0:
+                        continue
+                    x += training_labels[sorted_indexes[i]][0]
+                    y += training_labels[sorted_indexes[i]][1]
+                x = x / self.k
+                y = y / self.k
+                # treat the case when k is larger than labels???
+
+                pred_labels[row1] = (x, y)
+
+            return pred_labels
 
     def euclidean_distance(self, row1, row2):
         # Calculate Euclidean distance between two obejcts
@@ -107,46 +152,77 @@ class KNN(object):
         # YOUR CODE HERE!
         ###
         ##
+        if self.task_kind == "classification":
+            test_labels = np.zeros(test_data.shape[0], dtype=int)
 
-        test_labels = [0] * test_data.shape[0]
+            # calculating distances and deciding labels
+            for row1 in range(test_data.shape[0]):
+                distances = list()
+                for row2 in range(self.trainingData.shape[0]):
+                    dist = self.euclidean_distance(
+                        test_data[row1], self.trainingData[row2])
+                    distances.append((row2, dist))
+                distances.sort(key=lambda tup: tup[1])
 
-        # calculating distances and deciding labels
-        for row1 in test_data:
-            distances = list()
-            for row2 in self.trainingData:
-                dist = self.euclidean_distance(
-                    test_data[row1], self.trainingData[row2])
-                distances.append((row2, dist))
-            distances.sort(key=lambda tup: tup[1])
+                Times = [0] * 20
+                AverageDist = [0] * 20
+                for i in range(self.k):
+                    Times[int(self.trainingLabels[distances[i][0]])] += 1
+                    AverageDist[self.trainingLabels[distances[i][0]]
+                                ] += distances[i][1]
 
-            Times = [0] * 20
-            AverageDist = [0] * 20
-            for i in range(self.k):
-                Times[self.trainingLabels[distances[i][0]]] += 1
-                AverageDist[self.trainingLabels[distances[i][0]]
-                            ] += distances[i][1]
+                for i in range(self.k):
+                    if Times[i] == 0:
+                        continue
+                    AverageDist[i] = AverageDist[i] / Times[i]
 
-            for i in range(self.k):
-                if Times[i] == 0:
-                    continue
-                AverageDist[i] = AverageDist[i] / Times[i]
-
-            maxValue = np.max(Times)
-            count_max_value = 0
-            for i in range(20):
-                if Times[i] == maxValue:
-                    count_max_value += 1
-
-            if count_max_value == 1:
-                test_labels[row1] = np.argmax(Times)
-
-            else:
-                sol = np.max(AverageDist)
+                maxValue = np.max(Times)
+                count_max_value = 0
                 for i in range(20):
-                    if Times[i] == np.max(Times):
-                        if AverageDist[i] < sol:
-                            sol = AverageDist[i]
-                            index = i
-                test_labels[row1] = index
+                    if Times[i] == maxValue:
+                        count_max_value += 1
 
+                if count_max_value == 1:
+                    test_labels[row1] = np.argmax(Times)
+
+                else:
+                    sol = np.max(AverageDist)
+                    for i in range(20):
+                        if Times[i] == np.max(Times):
+                            if AverageDist[i] < sol:
+                                sol = AverageDist[i]
+                                index = i
+                    test_labels[row1] = index
+
+            return test_labels
+
+        else:
+            # preparing return variable
+            test_labels = np.zeros(test_data.shape[0], dtype=int)
+
+            # calculating distances and deciding labels
+            for row1 in range(test_data.shape[0]):
+                distances = list()
+                for row2 in range(self.trainingData.shape[0]):
+                    if row1 == row2:
+                        distances.append(0)
+                        continue
+                    dist = self.euclidean_distance(
+                        test_data[row1], self.trainingData[row2])
+                    distances.append(dist)
+
+                sorted_indexes = sorted(
+                    range(len(distances)), key=lambda i: distances[i])
+                distances.sort()
+                x = 0
+                y = 0
+                for i in range(self.k + 1):
+                    if i == 0:
+                        continue
+                    x += self.trainingLabels[sorted_indexes[i]][0]
+                    y += self.trainingLabels[sorted_indexes[i]][1]
+                x = x / self.k
+                y = y / self.k
+                # treat the case when k is larger than labels???
+                test_labels[row1] = (x, y)
         return test_labels

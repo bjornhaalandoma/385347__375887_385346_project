@@ -4,6 +4,8 @@ from ..utils import get_n_classes, label_to_onehot, onehot_to_label, accuracy_fn
 
 import matplotlib.pyplot as plt
 
+import time
+
 
 class LogisticRegression(object):
     """
@@ -12,7 +14,7 @@ class LogisticRegression(object):
     Implemented regularizer. Did not find any improvements from main, with different values of lambda) 
     """
 
-    def __init__(self, lr, max_iters=400, lambda_reg=0.01, task_kind="classification"):
+    def __init__(self, lr, max_iters, lambda_reg=0.001, task_kind="classification"):
         """
         Initialize the new object (see dummy_methods.py)
         and set its arguments.
@@ -27,6 +29,7 @@ class LogisticRegression(object):
         self.task_kind = task_kind
 
     def fit(self, training_data, training_labels):
+        s1 = time.time()
         """
         Trains the model, returns predicted labels for training data.
 
@@ -40,10 +43,15 @@ class LogisticRegression(object):
         self.gradient_descent(training_data, training_labels)
         pred_labels = self.logistic_regression_predict(
             training_data, self.weights)
+        s2 = time.time()
+
+        print(f"Time taken for training: {s2-s1}")
 
         return pred_labels
 
     def predict(self, test_data):
+
+        s3 = time.perf_counter()
         """
         Runs prediction on the test data.
 
@@ -55,6 +63,8 @@ class LogisticRegression(object):
 
         pred_labels = self.logistic_regression_predict(
             test_data, self.weights)
+        s4 = time.perf_counter()
+        print(f"Time taken for prediction: {s4-s3}")
 
         return pred_labels
 
