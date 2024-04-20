@@ -11,7 +11,7 @@ class LinearRegression(object):
         Recall that linear regression is just ridge regression with lambda=0.
     """
 
-    def __init__(self, lmda, task_kind="regression", lr=0.01, epochs=400):
+    def __init__(self, lmda, task_kind="regression", lr=0.1, epochs=1000):
         """
             Initialize the task_kind (see dummy_methods.py)
             and call set_arguments function of this class.
@@ -67,5 +67,11 @@ class LinearRegression(object):
             gradient = self.find_gradient(X_train, y_train, w)
             # Implement gradient clipping
             w -= self.lr * gradient
+
+        newlr = (self.lr / 100)
+        for i in range(1000):
+            gradient = self.find_gradient(X_train, y_train, w)
+            # Implement gradient clipping
+            w -= newlr * gradient
 
         return w

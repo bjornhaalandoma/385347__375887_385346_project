@@ -64,9 +64,9 @@ class KNN(object):
 
                 Times = [0] * 20
                 AverageDist = [0] * 20
-                for i in range(self.k + 1):
-                    if i == 0:
-                        continue
+                for i in range(self.k):
+                    # if i == 0:
+                    #    continue
                     label_index = sorted_indexes[i]
                     label = training_labels[label_index]
                     Times[label] += 1
@@ -153,11 +153,7 @@ class KNN(object):
             Returns:
                 test_labels (np.array): labels of shape (N,)
         """
-        ##
-        ###
-        # YOUR CODE HERE!
-        ###
-        ##
+
         if self.task_kind == "classification":
             test_labels = np.zeros(test_data.shape[0], dtype=int)
 
@@ -223,9 +219,7 @@ class KNN(object):
                 distances.sort()
                 x = 0
                 y = 0
-                for i in range(self.k + 1):
-                    if i == 0:
-                        continue
+                for i in range(self.k):
                     x += self.trainingLabels[sorted_indexes[i]][0]
                     y += self.trainingLabels[sorted_indexes[i]][1]
                 x = x / self.k
