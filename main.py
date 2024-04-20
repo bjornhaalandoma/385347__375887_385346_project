@@ -82,28 +82,78 @@ def main(args):
         method_obj = LinearRegression(lmda=args.lmda)
 
     elif args.method == "knn":
-        method_obj = KNN(k=args.K)
+        if args.task == "center_locating":
+            method_obj = KNN(k=args.K, task_kind="regression")
+        else:
+            method_obj = KNN(k=args.K)
 
     # 4. Train and evaluate the method
 
     # TODO Checking if ctrain is correct
 
     if args.task == "center_locating":
-        # Fit parameters on training data
 
-        preds_train = method_obj.fit(append_bias_term(xtrain), ctrain)
+        if args.plot_k:
+            k_values = []
+            losses = []
+            for i in range(1, 21):
+                model = KNN(k=i, task_kind="regression")
+                model.fit(append_bias_term(xtrain), ctrain)
+                preds = model.predict(append_bias_term(xtest))
+                loss = mse_fn(preds, ctest)
+                print(f"K={i} - Test set: loss = {loss:.3f}")
+                k_values.append(i)
+                losses.append(loss)
 
-        # Perform inference for training and test data
-        train_pred = method_obj.predict(append_bias_term(xtrain))
-        preds = method_obj.predict(append_bias_term(xtest))
+            fig, ax = plt.subplots()
+            ax.plot(k_values, losses, 'ro-')
+            ax.set_xlabel('K')
+            ax.set_ylabel('Loss')
+            ax.set_xticks(k_values)
+            ax.set_title('Loss for different K values')
+            plt.tight_layout()
+            plt.show()
 
-        # Report results: performance on train and valid/test sets
-        train_loss = mse_fn(train_pred, ctrain)
-        loss = mse_fn(preds, ctest)
+        else:
 
-        print(f"\nTrain loss = {train_loss:.3f}% - Test loss = {loss:.3f}")
+            preds_train = method_obj.fit(append_bias_term(xtrain), ctrain)
+
+            # Perform inference for training and test data
+            train_pred = method_obj.predict(append_bias_term(xtrain))
+            preds = method_obj.predict(append_bias_term(xtest))
+
+            # Report results: performance on train and valid/test sets
+            train_loss = mse_fn(train_pred, ctrain)
+            loss = mse_fn(preds, ctest)
+
+            print(f"\nTrain loss = {train_loss:.3f}% - Test loss = {loss:.3f}")
 
     elif args.task == "breed_identifying":
+
+        if args.plot_k:
+            k_values = []
+            accuracies = []
+            for i in range(1, 21):  # Assuming you want to plot k from 1 to 10
+                model = KNN(k=i)
+                model.fit(x_train_with_bias, ytrain)
+                preds = model.predict(x_test_with_bias)
+                acc = accuracy_fn(preds, ytest)
+                print(f"K={i} - Test set: accuracy = {acc:.3f}%")
+
+        # Save the k value and its corresponding accuracy
+                k_values.append(i)
+                accuracies.append(acc)
+
+    # Now plot all accuracies after the loop
+            fig, ax = plt.subplots()
+            # 'ro-' for red circles with line2
+            ax.plot(k_values, accuracies, 'ro-')
+            ax.set_xlabel('K')
+            ax.set_ylabel('Accuracy (%)')
+            ax.set_xticks(k_values)  # Set x-ticks to be each k value
+            ax.set_title('Accuracy for different K values')
+            plt.tight_layout()
+            plt.show()
 
         if args.plot_hyperparameters:
 
@@ -212,6 +262,8 @@ if __name__ == '__main__':
     parser.add_argument('--test', action="store_true",
                         help="train on whole training data and evaluate on the test data, otherwise use a validation set")
     parser.add_argument('--plot_hyperparameters', action='store_true',
+                        help="If set, plots the hyperparameter tuning results")
+    parser.add_argument('--plot_k', action='store_true',
                         help="If set, plots the hyperparameter tuning results")
 
     # Feel free to add more arguments here if you need!

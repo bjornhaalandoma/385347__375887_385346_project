@@ -1,3 +1,5 @@
+import time
+
 import numpy as np
 
 
@@ -16,6 +18,7 @@ class KNN(object):
         self.trainingLabels = None
 
     def fit(self, training_data, training_labels):
+        s1 = time.time()
 
         self.trainingData = training_data
         self.trainingLabels = training_labels
@@ -66,7 +69,6 @@ class KNN(object):
                         continue
                     label_index = sorted_indexes[i]
                     label = training_labels[label_index]
-                    print(f"label_index: {label_index}, label: {label}")
                     Times[label] += 1
                     AverageDist[label] += distances[i]
 
@@ -95,10 +97,12 @@ class KNN(object):
                                 index = i
                     pred_labels[row1] = index
 
+            s2 = time.time()
+            print(f"The time taken for fit: {s2-s1} ")
             return pred_labels
         else:
             # preparing return variable
-            pred_labels = np.zeros(training_data.shape[0], dtype=int)
+            pred_labels = [None] * training_data.shape[0]
 
             # calculating distances and deciding labels
             for row1 in range(training_data.shape[0]):
@@ -115,7 +119,6 @@ class KNN(object):
                     range(len(distances)), key=lambda i: distances[i])
                 distances.sort()
 
-                AverageDist = [0] * 20
                 x = 0
                 y = 0
                 for i in range(self.k + 1):
@@ -129,6 +132,8 @@ class KNN(object):
 
                 pred_labels[row1] = (x, y)
 
+            s2 = time.time()
+            print(f"The time taken for fit: {s2-s1} ")
             return pred_labels
 
     def euclidean_distance(self, row1, row2):
@@ -139,6 +144,7 @@ class KNN(object):
         return np.sqrt(sum)
 
     def predict(self, test_data):
+        s3 = time.perf_counter()
         """
             Runs prediction on the test data.
 
@@ -193,12 +199,13 @@ class KNN(object):
                                 sol = AverageDist[i]
                                 index = i
                     test_labels[row1] = index
-
+            s4 = time.perf_counter()
+            print(f"The time taken for prediction: {s4 - s3} ")
             return test_labels
 
         else:
             # preparing return variable
-            test_labels = np.zeros(test_data.shape[0], dtype=int)
+            test_labels = [None] * test_data.shape[0]
 
             # calculating distances and deciding labels
             for row1 in range(test_data.shape[0]):
@@ -225,4 +232,6 @@ class KNN(object):
                 y = y / self.k
                 # treat the case when k is larger than labels???
                 test_labels[row1] = (x, y)
-        return test_labels
+            s4 = time.perf_counter()
+            print(f"The time taken for prediction: {s4 - s3} ")
+            return test_labels

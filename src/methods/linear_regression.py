@@ -51,26 +51,6 @@ class LinearRegression(object):
         print(f"Time taken for prediction: {s4-s3}")
         return pred_regression_targets
 
-    # TODO: Remove? Currently not using
-
-    def get_loss(self, w, X_train, y_train, X_test, y_test):
-        """
-            Calculates the loss on the training and test sets.
-
-            Arguments:
-                w (np.array): weight parameters
-                X_train (np.array): training data of shape (N,D)
-                y_train (np.array): training labels of shape (N,regression_target_size)
-                X_test (np.array): test data of shape (N,D)
-                y_test (np.array): test labels of shape (N,regression_target_size)
-        """
-        loss_train = (np.mean((y_train-X_train@w)**2))
-        loss_test = (np.mean((y_test-X_test@w)**2))
-        print("The training loss is {}. The test loss is {}.".format(
-            loss_train, loss_test))
-
-        return loss_test
-
     def find_gradient(self, X, y, w):
         N = X.shape[0]
         pred_error = y - np.dot(X, w)
